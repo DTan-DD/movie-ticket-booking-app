@@ -23,16 +23,18 @@ const syncUserCreation = inngest.createFunction(
 );
 
 // Inngest function to delete user data from database
-const syncUserDeletion = inngest.createFunction(
-  {
-    id: "delete-user-with-clerk",
-  }, //
-  { event: "clerk/user.deleted" },
-  async ({ event }) => {
+const syncUserDeletion = inngest.createFunction({ id: "delete-user-with-clerk" }, { event: "clerk/user.deleted" }, async ({ event }) => {
+  await db.connect(); // đảm bảo connect xong mới query
+
+  try {
     const { id } = event.data;
     await User.findByIdAndDelete(id);
+    return { status: "deleted", id };
+  } catch (err) {
+    console.error("Delete user error:", err);
+    throw err;
   }
-);
+});
 
 // Inngest function to update user data to database
 const syncUserUpdation = inngest.createFunction(

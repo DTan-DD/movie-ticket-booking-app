@@ -1,15 +1,15 @@
 "use strict";
 import { Schema, model } from "mongoose";
 
-const DOCUMENT_NAME = "apiKey";
-const COLLECTION_NAME = "apiKeys";
+const DOCUMENT_NAME = "user";
+const COLLECTION_NAME = "users";
 
 const userSchema = new Schema(
   {
-    _id: { type: String, require: true },
-    name: { type: String, require: true },
-    email: { type: String, require: true },
-    image: { type: String, require: true },
+    _id: { type: String, required: true },
+    name: { type: String, required: true },
+    email: { type: String, required: true },
+    image: { type: String, required: true },
   },
   {
     timestamps: true,

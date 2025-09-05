@@ -1,5 +1,6 @@
 import { Inngest } from "inngest";
 import User from "../models/User.js";
+import { db } from "../../dbs/init.mongodb.js";
 
 // Create a client to send and receive events
 export const inngest = new Inngest({ id: "movie-ticket-booking" });
@@ -23,18 +24,23 @@ const syncUserCreation = inngest.createFunction(
 );
 
 // Inngest function to delete user data from database
-const syncUserDeletion = inngest.createFunction({ id: "delete-user-with-clerk" }, { event: "clerk/user.deleted" }, async ({ event }) => {
-  await db.connect(); // đảm bảo connect xong mới query
+const syncUserDeletion = inngest.createFunction(
+  { id: "delete-user-with-clerk" }, //
+  { event: "clerk/user.deleted" },
+  async ({ event }) => {
+    await db.connect(); // đảm bảo connect xong mới query
 
-  try {
-    const { id } = event.data;
-    await User.findByIdAndDelete(id);
-    return { status: "deleted", id };
-  } catch (err) {
-    console.error("Delete user error:", err);
-    throw err;
+    try {
+      const { id } = event.data;
+      console.log(id);
+      await User.findByIdAndDelete(id);
+      return { status: "deleted", id };
+    } catch (err) {
+      console.error("Delete user error:", err);
+      throw err;
+    }
   }
-});
+);
 
 // Inngest function to update user data to database
 const syncUserUpdation = inngest.createFunction(

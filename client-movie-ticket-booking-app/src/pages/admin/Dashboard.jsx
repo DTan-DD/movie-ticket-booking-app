@@ -1,12 +1,14 @@
 import { ChartLineIcon, CircleDollarSignIcon, PlayCircleIcon, StarIcon, UserIcon } from "lucide-react";
 import React, { useEffect, useState } from "react";
-import { dummyDashboardData } from "../../assets/assets";
 import Loading from "../../components/Loading";
 import Title from "../../components/admin/Title";
 import BlurCircle from "../../components/BlurCircle";
 import dateFormat from "../../lib/dateFormat";
+import { useAppContext } from "../../context/AppContext";
 
 const Dashboard = () => {
+  const { axios, getToken, user, image_base_url } = useAppContext();
+
   const currency = import.meta.env.VITE_CURRENCY;
   const [dashboardData, setDashboardData] = useState({
     totalBookings: 0,
@@ -24,13 +26,25 @@ const Dashboard = () => {
   ];
 
   const fetchDashboardData = async () => {
-    setDashboardData(dummyDashboardData);
-    setLoading(false);
+    try {
+      const { data } = await axios.get("/v1/api/admin/dashboard", {
+        headers: { Authorization: `Bearer ${await getToken()}` },
+      });
+      // console.log(data);
+      if (data.success) {
+        setDashboardData(data.dashboardData);
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error("Error fetching dashboard data: ", error);
+    }
   };
 
   useEffect(() => {
-    fetchDashboardData();
-  }, []);
+    if (user) {
+      fetchDashboardData();
+    }
+  }, [user]);
 
   return !loading ? (
     <>
@@ -64,7 +78,7 @@ const Dashboard = () => {
             className="w-55 rounded-lg h-full overflow-hidden pb-3 bg-primary/10 border border-primary/20 
             hover:-translate-y-1 transition duration-300"
           >
-            <img src={show.movie.poster_path} alt="" className="h-60 object-cover w-full" />
+            <img src={image_base_url + show.movie.poster_path} alt="" className="h-60 object-cover w-full" />
             <p className="font-medium truncate p-2">{show.movie.title}</p>
             <div className="flex px-2 items-center justify-between">
               <p className="text-lg font-medium">

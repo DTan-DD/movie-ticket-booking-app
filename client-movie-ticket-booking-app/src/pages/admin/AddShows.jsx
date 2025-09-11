@@ -1,20 +1,35 @@
 import React, { useEffect, useState } from "react";
-import { dummyShowsData } from "../../assets/assets";
+// import { dummyShowsData } from "../../assets/assets";
 import Loading from "../../components/Loading";
 import Title from "../../components/admin/Title";
 import { CheckIcon, DeleteIcon, StarIcon } from "lucide-react";
 import { kConverter } from "../../lib/KConverter";
+import { useAppContext } from "../../context/AppContext";
+import toast from "react-hot-toast";
 
 const AddShows = () => {
+  const { axios, getToken, user, image_base_url } = useAppContext();
+
   const currency = import.meta.env.VITE_CURRENCY;
   const [nowPlayingMovies, setNowPlayingMovies] = useState([]);
   const [selectedMovie, setSelectedMovie] = useState(null);
   const [dateTimeSelection, setDateTimeSelection] = useState({});
   const [dateTimeInput, setDateTimeInput] = useState("");
   const [showPrice, setShowPrice] = useState("");
+  const [addingShow, setAddingShow] = useState(false);
 
   const fetchNowPlayingMovies = async () => {
-    setNowPlayingMovies(dummyShowsData);
+    try {
+      const { data } = await axios.get("/v1/api/shows/now-playing", {
+        headers: { Authorization: `Bearer ${await getToken()}` },
+      });
+      // console.log(data);
+      if (data.success) {
+        setNowPlayingMovies(data.movies);
+      }
+    } catch (error) {
+      console.error("Error fetching movies: ", error);
+    }
   };
 
   const handleDateTimeAdd = () => {
@@ -23,9 +38,9 @@ const AddShows = () => {
     if (!date || !time) return;
 
     setDateTimeSelection((prev) => {
-      const times = prev[date] || [];
-      if (!times.includes(time)) {
-        return { ...prev, [date]: [...times, time] };
+      const timeList = prev[date] || [];
+      if (!timeList.includes(time)) {
+        return { ...prev, [date]: [...timeList, time] };
       }
       return prev;
     });
@@ -43,9 +58,53 @@ const AddShows = () => {
     });
   };
 
+  const handleSubmit = async () => {
+    try {
+      setAddingShow(true);
+
+      if (!selectedMovie || Object.keys(dateTimeSelection).length === 0 || !showPrice) {
+        return toast("Missing required fields!");
+      }
+
+      const showsInput = Object.entries(dateTimeSelection).map(([date, time]) => ({
+        date,
+        time,
+      }));
+
+      const payload = {
+        movieId: selectedMovie,
+        showsInput,
+        showPrice: Number(showPrice),
+      };
+
+      console.log(payload);
+
+      const { data } = await axios.post("/v1/api/shows/add", payload, {
+        headers: { Authorization: `Bearer ${await getToken()}` },
+      });
+
+      if (data.success) {
+        toast.success(data.message);
+        setSelectedMovie(null);
+        setDateTimeSelection({});
+        setShowPrice("");
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      console.error("Error adding show: ", error);
+      toast.error("Something went wrong. Please try again.");
+    }
+
+    setAddingShow(false);
+  };
+
   useEffect(() => {
-    fetchNowPlayingMovies();
-  }, []);
+    if (user) {
+      fetchNowPlayingMovies();
+    }
+  }, [user]);
+
   return nowPlayingMovies.length > 0 ? (
     <>
       <Title text1="List" text2="Shows" />
@@ -60,7 +119,7 @@ const AddShows = () => {
               onClick={() => setSelectedMovie(movie.id)}
             >
               <div className="relative rounded-lg overflow-hidden">
-                <img src={movie.poster_path} alt="" className="brightness-90 object-cover w-full" />
+                <img src={image_base_url + movie.poster_path} alt="" className="brightness-90 object-cover w-full" />
                 <div
                   className="text-sm flex items-center justify-between p-2 bg-black/70 w-full
                 absolute bottom-0 left-0"
@@ -146,6 +205,8 @@ const AddShows = () => {
         </div>
       )}
       <button
+        onClick={handleSubmit}
+        disabled={addingShow}
         className="bg-primary text-white px-8 py-2 mt-6 rounded hover:bg-primary/60
       transition-all cursor-pointer"
       >

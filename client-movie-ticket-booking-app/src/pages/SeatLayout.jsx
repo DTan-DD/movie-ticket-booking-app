@@ -1,11 +1,12 @@
-import React, { useEffect, useState } from "react";
+import React, { use, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { assets, dummyDateTimeData, dummyShowsData } from "../assets/assets";
+import { assets } from "../assets/assets";
 import Loading from "../components/Loading";
 import { ArrowRight, ArrowRightIcon, ClockIcon } from "lucide-react";
 import isoTimeFormat from "../lib/isoTimeFormat";
 import BlurCircle from "../components/BlurCircle";
 import toast from "react-hot-toast";
+import { useAppContext } from "../context/AppContext";
 
 const SeatLayout = () => {
   const groupRows = [
@@ -19,7 +20,9 @@ const SeatLayout = () => {
   const [selectedSeats, setSelectedSeats] = useState([]);
   const [selectedTime, setSelectedTime] = useState(null);
   const [show, setShow] = useState(null);
+  const [occupiedSeats, setOccupiedSeats] = useState([]);
 
+  const { axios, getToken, user, image_base_url } = useAppContext();
   const navigate = useNavigate();
 
   const handleSeatClick = (seatId) => {
@@ -28,6 +31,9 @@ const SeatLayout = () => {
     }
     if (!selectedSeats.includes(seatId) && selectedSeats.length > 4) {
       return toast("You can only select 5 seats!");
+    }
+    if (occupiedSeats.includes(seatId)) {
+      return toast("This seat is already booked!");
     }
     setSelectedSeats((pre) => (pre.includes(seatId) ? pre.filter((seat) => seat !== seatId) : [...pre, seatId]));
   };
@@ -42,7 +48,8 @@ const SeatLayout = () => {
               key={seatId}
               onClick={() => handleSeatClick(seatId)}
               className={`h-8 w-8 rounded border
-              border-primary/60 cursor-pointer ${selectedSeats.includes(seatId) && "bg-primary text-white"}`}
+              border-primary/60 cursor-pointer ${selectedSeats.includes(seatId) && "bg-primary text-white"}
+              ${occupiedSeats.includes(seatId) && "opacity-50"}`}
             >
               {seatId}
             </button>
@@ -53,18 +60,73 @@ const SeatLayout = () => {
   );
 
   const getShow = async () => {
-    const show = dummyShowsData.find((show) => show._id === id);
-    if (show) {
-      setShow({
-        movie: show,
-        dateTime: dummyDateTimeData,
-      });
+    try {
+      const { data } = await axios.get(`/v1/api/shows/${id}`);
+      // console.log(data);
+      if (data.success) {
+        setShow(data);
+      }
+    } catch (error) {
+      console.error("Error fetching shows: ", error);
+    }
+  };
+
+  const getOccupiedSeat = async () => {
+    try {
+      const { data } = await axios.get(`/v1/api/bookings/seats/${selectedTime.showId}`);
+      // console.log(data);
+      if (data.success) {
+        setOccupiedSeats(data.occupiedSeats);
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      console.error("Error fetching occupied seats: ", error);
+    }
+  };
+
+  const bookTickets = async () => {
+    try {
+      if (!user) {
+        toast.error("Please login to book tickets");
+      }
+
+      if (!selectedTime || !selectedSeats.length) {
+        return toast.error("Please select time and seats");
+      }
+
+      const { data } = await axios.post(
+        `/v1/api/bookings/create/`,
+        {
+          showId: selectedTime.showId,
+          selectedSeats,
+        },
+        {
+          headers: { Authorization: `Bearer ${await getToken()}` },
+        }
+      );
+      // console.log(data);
+      if (data.success) {
+        // toast.success("Tickets booked successfully");
+        // navigate("/my-bookings");
+        window.location.href = data.redirectUrl;
+      } else {
+        toast.error("Something went wrong");
+      }
+    } catch (error) {
+      console.error("Error fetching occupied seats: ", error);
     }
   };
 
   useEffect(() => {
     getShow();
   }, []);
+
+  useEffect(() => {
+    if (selectedTime) {
+      getOccupiedSeat();
+    }
+  }, [selectedTime]);
 
   return show ? (
     <div>
@@ -108,10 +170,7 @@ const SeatLayout = () => {
           </div>
 
           <button
-            onClick={() => {
-              navigate("/my-bookings");
-              scrollTo(0, 0);
-            }}
+            onClick={bookTickets}
             className="flex items-center gap-1 mt-20 px-10 py-3 text-sm bg-primary hover:bg-primary-dull transition rounded-full 
           font-medium cursor-pointer active:scale-95"
           >

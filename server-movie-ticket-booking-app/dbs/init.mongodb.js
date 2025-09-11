@@ -15,8 +15,10 @@ class Database {
 
     try {
       if (process.env.NODE_ENV !== "production") {
-        mongoose.set("debug", true);
-        mongoose.set("debug", { color: true });
+        // mongoose.set("debug", { color: true });
+        mongoose.set("debug", false);
+      } else {
+        mongoose.set("debug", false);
       }
 
       await mongoose.connect(connectString, {

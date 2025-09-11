@@ -60,7 +60,7 @@ export const createBooking = async (req, res) => {
     const result = await createZalopayPayment({ orderId: booking._id.toString(), originUrl: origin });
     console.log("test payment: ", result);
 
-    booking.paymentLink = result;
+    booking.paymentLink = result.paymentLink;
     await booking.save();
 
     // Run Inngest Scheduler Function to check payment status after 10 minutes

@@ -26,7 +26,7 @@ export async function createZalopayPayment({ orderId, originUrl }) {
     amount: booking.amount,
     description: `Payment for booking ${booking._id}`,
     bank_code: "",
-    callback_url: "https://ztcinema.vercel.app/v1/api/payment/zalopay/callback",
+    callback_url: "https://movie-ticket-booking-app-eight.vercel.app/v1/api/payment/zalopay/callback",
   };
   console.log(config.key1);
   // Tạo MAC ký dữ liệu
